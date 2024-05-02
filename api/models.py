@@ -10,3 +10,4 @@ class CustomUser(AbstractUser):
     )
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
     otp = models.CharField(max_length=4, blank=True, null=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)

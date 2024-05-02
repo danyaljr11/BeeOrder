@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.views import APIView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 import random
-from django.contrib.auth import logout
+from django.contrib.auth import logout, authenticate
 
 
 class RegisterView(generics.CreateAPIView):
@@ -15,39 +16,47 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
 
-class LoginView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
-    serializer_class = UserSerializer
-
+class LoginView(APIView):
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         password = request.data.get('password')
-        try:
-            user = CustomUser.objects.get(email=email)
-        except CustomUser.DoesNotExist:
-            return Response({"error": "User does not exist"}, status=status.HTTP_200_OK)
 
-        if not user.check_password(password):
-            return Response({"error": "Invalid password"}, status=status.HTTP_200_OK)
+        user = authenticate(request, email=email, password=password)
+
+        if not user:
+            return Response({"error": "Invalid email or password"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
         token = str(refresh.access_token)
 
-        return Response({"token": token, "email": email})
+        # Serialize user data
+        serializer = UserSerializer(user)
+
+        # Customize the response data
+        response_data = {
+            "user": serializer.data,
+            "token": token
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
-class LogoutView(APIView):
+class LogoutView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        # Retrieve the token from the request body
+        # Invalidate the token
         token = request.data.get('token')
+        if token:
+            try:
+                # Blacklist the token
+                BlacklistedToken.objects.create(token=token)
+            except Exception as e:
+                # Handle exception, e.g., token already blacklisted
+                pass
 
-        if not token:
-            return Response({"error": "Token not provided in the request body"}, status=status.HTTP_200_OK)
-
-        # Perform logout using the provided token
+        # Perform logout (clear session)
         logout(request)
 
         return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
