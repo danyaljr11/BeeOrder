@@ -1,78 +1,125 @@
 from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from django.contrib.auth import authenticate, login
+from django.core.mail import send_mail
+from django.conf import settings
 from rest_framework.views import APIView
-
-from .defs import send_otp
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
+import random
+from django.contrib.auth import logout
 
 
-class CustomerRegisterView(generics.CreateAPIView):
-    permission_classes = (AllowAny,)
+class RegisterView(generics.CreateAPIView):
+    queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
-    queryset = User.objects.filter(user_type='customer')
+
+
+class LoginView(generics.CreateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
 
     def post(self, request, *args, **kwargs):
-        mutable_data = request.data.copy()  # Make a mutable copy of the data
-        password = mutable_data.get('password')
-        confirm_password = mutable_data.get('confirm_password')
-        if password != confirm_password:
-            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
-        return super().post(request, *args, **kwargs)
+        email = request.data.get('email')
+        password = request.data.get('password')
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User does not exist"}, status=status.HTTP_200_OK)
+
+        if not user.check_password(password):
+            return Response({"error": "Invalid password"}, status=status.HTTP_200_OK)
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        token = str(refresh.access_token)
+
+        return Response({"token": token, "email": email})
 
 
-class CustomerLoginView(APIView):
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        serializer = CustomerLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-            user = authenticate(request=request, email=email, password=password)
-            if user is not None:
-                login(request, user)
-                return Response({"message": "Logged in successfully."}, status=status.HTTP_200_OK)
-        return Response({"error": "Unable to log in with provided credentials."}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request, *args, **kwargs):
+        # Retrieve the token from the request body
+        token = request.data.get('token')
 
+        if not token:
+            return Response({"error": "Token not provided in the request body"}, status=status.HTTP_200_OK)
 
-class ResetPasswordView(APIView):
-    def post(self, request):
-        serializer = ResetPasswordSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            try:
-                user = User.objects.get(email=email)
-                otp = send_otp(email)
-                if otp:
-                    # Here you can save the OTP in the user object or in the session for verification
-                    return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
-                else:
-                    return Response({"error": "Failed to send OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            except User.DoesNotExist:
-                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Perform logout using the provided token
+        logout(request)
+
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
 
 
-class OTPVerificationView(APIView):
-    def post(self, request):
-        serializer = OTPVerificationSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            otp = serializer.validated_data['otp']
+class ResetPasswordView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
 
-            # Retrieve the user by email
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
 
-            # Check if the OTP matches
-            if user.otp == otp:  # Assuming you have a field 'otp' in your User model
-                # OTP is valid, you can now proceed with password reset or any other action
-                return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Generate OTP
+        otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+
+        # Send OTP via email
+        send_mail(
+            'Password Reset OTP',
+            f'Your OTP is: {otp}',
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
+        )
+
+        # Store the email and OTP in the session
+        request.session['reset_password_email'] = email
+        request.session['reset_password_otp'] = otp
+
+        return Response({"message": "OTP sent to your email"}, status=status.HTTP_200_OK)
+
+
+class VerifyOTPView(generics.GenericAPIView):
+    serializer_class = VerifyOTPSerializer
+
+    def post(self, request, *args, **kwargs):
+        otp_entered = request.data.get('otp')
+        email = request.session.get('reset_password_email')
+        stored_otp = request.session.get('reset_password_otp')
+
+        if not email or not stored_otp:
+            return Response({"error": "Email or OTP not found in session"}, status=status.HTTP_200_OK)
+
+        if stored_otp != otp_entered:
+            return Response({"error": "Invalid OTP"}, status=status.HTTP_200_OK)
+
+        # Clear the OTP from the session after successful verification
+        del request.session['reset_password_otp']
+
+        return Response({"message": "OTP verified successfully, please provide your new password"},
+                        status=status.HTTP_200_OK)
+
+
+class SetNewPasswordView(generics.GenericAPIView):
+    serializer_class = SetNewPasswordSerializer
+
+    def post(self, request, *args, **kwargs):
+        new_password = request.data.get('new_password')
+        email = request.session.get('reset_password_email')
+
+        if not email:
+            return Response({"error": "Email not found in session"}, status=status.HTTP_200_OK)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User does not exist"}, status=status.HTTP_200_OK)
+
+        # Reset password
+        user.set_password(new_password)
+        user.save()
+
+        # Clear the session after password reset
+        del request.session['reset_password_email']
+
+        return Response({"message": "Password reset successfully, please login with your new password"},
+                        status=status.HTTP_200_OK)
