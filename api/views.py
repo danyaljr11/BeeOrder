@@ -24,7 +24,7 @@ class LoginView(APIView):
         user = authenticate(request, email=email, password=password)
 
         if not user:
-            return Response({"error": "Invalid email or password"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status": False, "message": "Invalid email or password"}, status=status.HTTP_200_OK)
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -35,6 +35,7 @@ class LoginView(APIView):
 
         # Customize the response data
         response_data = {
+            "status": True,
             "user": serializer.data,
             "token": token
         }
@@ -66,7 +67,13 @@ class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
 
     def post(self, request, *args, **kwargs):
-        email = request.data.get('email')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data.get('email')
+
+        # Check if email exists in the database
+        if not CustomUser.objects.filter(email=email).exists():
+            return Response({"status": False, "message": "Email not found in the database"}, status=status.HTTP_200_OK)
 
         # Generate OTP
         otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
@@ -84,7 +91,7 @@ class ResetPasswordView(generics.GenericAPIView):
         request.session['reset_password_email'] = email
         request.session['reset_password_otp'] = otp
 
-        return Response({"message": "OTP sent to your email"}, status=status.HTTP_200_OK)
+        return Response({"status": True, "message": "OTP sent to your email"}, status=status.HTTP_200_OK)
 
 
 class VerifyOTPView(generics.GenericAPIView):
@@ -96,39 +103,44 @@ class VerifyOTPView(generics.GenericAPIView):
         stored_otp = request.session.get('reset_password_otp')
 
         if not email or not stored_otp:
-            return Response({"error": "Email or OTP not found in session"}, status=status.HTTP_200_OK)
+            return Response({"status": False, "message": "Email or OTP not found in session"}, status=status.HTTP_200_OK)
 
         if stored_otp != otp_entered:
-            return Response({"error": "Invalid OTP"}, status=status.HTTP_200_OK)
+            return Response({"status": False, "message": "Invalid OTP"}, status=status.HTTP_200_OK)
 
-        # Clear the OTP from the session after successful verification
-        del request.session['reset_password_otp']
-
-        return Response({"message": "OTP verified successfully, please provide your new password"},
+        return Response({"status": True, "message": "OTP verified successfully, please provide your new password"},
                         status=status.HTTP_200_OK)
 
 
-class SetNewPasswordView(generics.GenericAPIView):
-    serializer_class = SetNewPasswordSerializer
+class ChangePasswordView(generics.GenericAPIView):
+    serializer_class = ChangePasswordSerializer
 
     def post(self, request, *args, **kwargs):
-        new_password = request.data.get('new_password')
-        email = request.session.get('reset_password_email')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data.get('email')
+        otp_entered = serializer.validated_data.get('otp')
+        new_password = serializer.validated_data.get('new_password')
 
-        if not email:
-            return Response({"error": "Email not found in session"}, status=status.HTTP_200_OK)
-
+        # Check if email exists in the database
         try:
             user = CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
-            return Response({"error": "User does not exist"}, status=status.HTTP_200_OK)
+            return Response({"status": False, "message": "Email not found in the database"}, status=status.HTTP_200_OK)
 
-        # Reset password
+        # Verify OTP
+        stored_otp = request.session.get('reset_password_otp')
+        if not stored_otp or stored_otp != otp_entered:
+            return Response({"status": False, "message": "Invalid OTP"}, status=status.HTTP_200_OK)
+
+        # Update user's password
         user.set_password(new_password)
         user.save()
 
-        # Clear the session after password reset
-        del request.session['reset_password_email']
+        # Clear the OTP from the session
+        del request.session['reset_password_otp']
 
-        return Response({"message": "Password reset successfully, please login with your new password"},
-                        status=status.HTTP_200_OK)
+        return Response({"status": True, "message": "Password changed successfully"}, status=status.HTTP_200_OK)
+
+
+

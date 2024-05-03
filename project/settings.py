@@ -8,6 +8,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_COOKIE_SECURE = False
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -109,3 +111,7 @@ AUTHENTICATION_BACKENDS = [
 
 # Your custom user model if you have one
 AUTH_USER_MODEL = 'api.CustomUser'
+
+
+STATIC_URL = '/static/'
+STATIC_ROOT = '/home/rapitorder/BeeOrder/static/'

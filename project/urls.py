@@ -9,7 +9,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view()),
     path('reset-password/', ResetPasswordView.as_view()),
     path('verify-otp/', VerifyOTPView.as_view()),
-    path('set-new-password/', SetNewPasswordView.as_view()),
+    path('change-password/', ChangePasswordView.as_view()),
 
 ]
 
