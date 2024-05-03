@@ -1,4 +1,5 @@
-from rest_framework import generics, status
+from django.db.models import Q
+from rest_framework import generics, status, mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.core.mail import send_mail
@@ -15,8 +16,18 @@ class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
 
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        return Response({
+            "status": True,
+            "message": "User registered successfully",
+            "data": response.data
+        }, status=status.HTTP_201_CREATED)
 
-class LoginView(APIView):
+
+class LoginView(generics.GenericAPIView):
+    serializer_class = UserSerializer
+
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
         password = request.data.get('password')
@@ -24,7 +35,11 @@ class LoginView(APIView):
         user = authenticate(request, email=email, password=password)
 
         if not user:
-            return Response({"status": False, "message": "Invalid email or password"}, status=status.HTTP_200_OK)
+            return Response({
+                "status": False,
+                "message": "Invalid email or password",
+                "data": {}
+            }, status=status.HTTP_200_OK)
 
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
@@ -34,13 +49,14 @@ class LoginView(APIView):
         serializer = UserSerializer(user)
 
         # Customize the response data
-        response_data = {
+        return Response({
             "status": True,
-            "user": serializer.data,
-            "token": token
-        }
-
-        return Response(response_data, status=status.HTTP_200_OK)
+            "message": "User logged in successfully",
+            "data": {
+                "user": serializer.data,
+                "token": token
+            }
+        }, status=status.HTTP_200_OK)
 
 
 class LogoutView(generics.GenericAPIView):
@@ -103,7 +119,8 @@ class VerifyOTPView(generics.GenericAPIView):
         stored_otp = request.session.get('reset_password_otp')
 
         if not email or not stored_otp:
-            return Response({"status": False, "message": "Email or OTP not found in session"}, status=status.HTTP_200_OK)
+            return Response({"status": False, "message": "Email or OTP not found in session"},
+                            status=status.HTTP_200_OK)
 
         if stored_otp != otp_entered:
             return Response({"status": False, "message": "Invalid OTP"}, status=status.HTTP_200_OK)
@@ -143,4 +160,74 @@ class ChangePasswordView(generics.GenericAPIView):
         return Response({"status": True, "message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
 
+class PanerPictureListView(mixins.ListModelMixin, generics.GenericAPIView):
+    queryset = PanerPicture.objects.all()
+    serializer_class = PanerPictureSerializer
 
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class RestaurantListView(mixins.ListModelMixin, generics.GenericAPIView):
+    queryset = Restaurant.objects.all()
+    serializer_class = RestaurantSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class CategoryListView(mixins.ListModelMixin, generics.GenericAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class FoodByCategoryView(mixins.ListModelMixin, generics.GenericAPIView):
+    serializer_class = FoodSerializer
+
+    def get_queryset(self):
+        category_id = self.kwargs['category_id']
+        return Food.objects.filter(category_id=category_id)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class FoodByRestaurantView(mixins.ListModelMixin, generics.GenericAPIView):
+    serializer_class = FoodSerializer
+
+    def get_queryset(self):
+        restaurant_id = self.kwargs['restaurant_id']
+        return Food.objects.filter(restaurant_id=restaurant_id)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class SearchView(generics.GenericAPIView):
+    serializer_class = serializers.Serializer  # Dummy serializer class
+
+    def post(self, request, *args, **kwargs):
+        query = self.request.data.get('query', '')
+        food_results = Food.objects.filter(Q(name__icontains=query))
+        restaurant_results = Restaurant.objects.filter(Q(name__icontains=query))
+
+        food_serializer = FoodSerializer(food_results, many=True)
+        restaurant_serializer = RestaurantSerializer(restaurant_results, many=True)
+
+        return Response({
+            'foods': food_serializer.data,
+            'restaurants': restaurant_serializer.data
+        })
+
+
+class FoodDetailView(generics.RetrieveAPIView):
+    queryset = Food.objects.all()
+    serializer_class = FoodSerializerAll
+
+
+class RestaurantDetailView(generics.RetrieveAPIView):
+    queryset = Restaurant.objects.all()
+    serializer_class = RestaurantSerializerAll

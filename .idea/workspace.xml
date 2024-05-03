@@ -4,14 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5c49f405-8860-4568-abda-551305eeb0e6" name="Changes" comment="after solving token issue">
+    <list default="true" id="5c49f405-8860-4568-abda-551305eeb0e6" name="Changes" comment="last changes on users control">
+      <change afterPath="$PROJECT_DIR$/category_icons/IT.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category_icons/IT_c0ykn7h.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category_icons/IT_dwUcF86.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category_icons/IT_zM6HwiL.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/category_icons/web_developer.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/food_pictures/IT.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/food_pictures/IT_Ybq0W7a.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paner_pictures/IT.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/paner_pictures/IT_v65xv5D.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/restaurant_pictures/IT.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/restaurant_pictures/IT_eX7CcAe.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/admin.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/migrations/0001_initial.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/migrations/0001_initial.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/serializers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/project/settings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/project/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/project/urls.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -28,6 +39,9 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
@@ -93,14 +107,34 @@
       <option name="project" value="LOCAL" />
       <updated>1714615618899</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="last changes on users control">
+      <option name="closed" value="true" />
+      <created>1714699969168</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1714699969168</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="costumer (register + login + reset password + verify otp)" />
     <MESSAGE value="All users (Register + Login + Logout + reset password + verify otp +set new password)" />
     <MESSAGE value="after solving token issue" />
-    <option name="LAST_COMMIT_MESSAGE" value="after solving token issue" />
+    <MESSAGE value="last changes on users control" />
+    <option name="LAST_COMMIT_MESSAGE" value="last changes on users control" />
   </component>
 </project>

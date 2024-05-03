@@ -55,3 +55,39 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not CustomUser.objects.filter(email=value).exists():
             raise serializers.ValidationError("Email not found in the database")
         return value
+
+
+class PanerPictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PanerPicture
+        fields = ['id', 'picture']
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'icon']
+
+
+class RestaurantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'name', 'address', 'picture']
+
+
+class RestaurantSerializerAll(serializers.ModelSerializer):
+    class Meta:
+        model = Restaurant
+        fields = ['id', 'name', 'address', 'picture', 'desc']
+
+
+class FoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Food
+        fields = ['id', 'name', 'picture', 'price', 'restaurant', 'category']
+
+
+class FoodSerializerAll(serializers.ModelSerializer):
+    class Meta:
+        model = Food
+        fields = ['id', 'name', 'picture', 'price', 'restaurant', 'category', 'desc']
