@@ -43,6 +43,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 class VerifyOTPSerializer(serializers.Serializer):
     otp = serializers.CharField()
+    email = serializers.EmailField()
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -82,12 +83,31 @@ class RestaurantSerializerAll(serializers.ModelSerializer):
 
 
 class FoodSerializer(serializers.ModelSerializer):
+    restaurant = RestaurantSerializerAll(read_only=True)
+
     class Meta:
         model = Food
         fields = ['id', 'name', 'picture', 'price', 'restaurant', 'category']
 
 
 class FoodSerializerAll(serializers.ModelSerializer):
+    restaurant = RestaurantSerializerAll(read_only=True)
+
     class Meta:
         model = Food
         fields = ['id', 'name', 'picture', 'price', 'restaurant', 'category', 'desc']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'restaurant', 'delivery_location', 'total_price', 'status', 'date_time', 'items']
+
+    def create(self, validated_data):
+        return Order.objects.create(**validated_data)
+
+
+class FCMDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FCMDevice
+        fields = ('id', 'user', 'registration_id', 'type')
