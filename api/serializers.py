@@ -86,13 +86,13 @@ class CategorySerializer(serializers.ModelSerializer):
 class RestaurantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
-        fields = ['id', 'name', 'address', 'picture']
+        fields = ['id', 'name', 'address', 'picture', 'lat', 'lot']
 
 
 class RestaurantSerializerAll(serializers.ModelSerializer):
     class Meta:
         model = Restaurant
-        fields = ['id', 'name', 'address', 'picture', 'desc']
+        fields = ['id', 'name', 'address', 'lat', 'lot', 'picture', 'desc']
 
 
 class FoodSerializer(serializers.ModelSerializer):
@@ -114,7 +114,7 @@ class FoodSerializerAll(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'restaurant', 'delivery_location', 'total_price', 'status', 'date_time', 'items']
+        fields = ['id', 'customer', 'restaurant', 'lat', 'lot', 'total_price', 'status', 'date_time', 'items']
 
     def create(self, validated_data):
         return Order.objects.create(**validated_data)

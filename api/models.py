@@ -35,7 +35,9 @@ class Category(models.Model):
 
 class Restaurant(models.Model):
     name = models.CharField(max_length=200)
-    address = models.CharField(max_length=300)
+    address = models.CharField(max_length=200)
+    lat = models.FloatField(max_length=300)
+    lot = models.FloatField(max_length=300)
     picture = models.ImageField(upload_to='images/restaurant_pictures/')
     desc = models.CharField(max_length=300)
     manager = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='restaurant')
@@ -69,7 +71,8 @@ class Order(models.Model):
     delivery_guy = models.ForeignKey(CustomUser, null=True, blank=True, on_delete=models.SET_NULL, related_name='deliveries')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    delivery_location = models.CharField(max_length=255)  # Example field, you can adjust as needed
+    lat = models.FloatField(max_length=300)
+    lot = models.FloatField(max_length=300)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)  # Example field, you can adjust as needed
     date_time = models.DateTimeField()  # Example field, you can adjust as needed
     items = models.JSONField()  # JSON field for storing items

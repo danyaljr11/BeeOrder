@@ -5,23 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5c49f405-8860-4568-abda-551305eeb0e6" name="Changes" comment="after adding restaurants and categories and food">
-      <change afterPath="$PROJECT_DIR$/api/firebase.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/api/signals.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/serviceAccountKey.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/apps.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/apps.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/backends.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/backends.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/migrations/0001_initial.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/migrations/0001_initial.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/notifications.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/permissions.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/permissions.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/serializers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/project/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/project/urls.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -131,7 +119,15 @@
       <option name="project" value="LOCAL" />
       <updated>1718331531122</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="after editing restaurant creation&#10;and restaurant login">
+      <option name="closed" value="true" />
+      <created>1720768372357</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1720768372357</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -151,8 +147,9 @@
     <MESSAGE value="All users (Register + Login + Logout + reset password + verify otp +set new password)" />
     <MESSAGE value="after solving token issue" />
     <MESSAGE value="last changes on users control" />
-    <MESSAGE value="after adding restaurants and categories and food" />
     <MESSAGE value="after adding FCM and notifications.py &#10;and Post man documentation" />
-    <option name="LAST_COMMIT_MESSAGE" value="after adding FCM and notifications.py &#10;and Post man documentation" />
+    <MESSAGE value="after adding restaurants and categories and food" />
+    <MESSAGE value="after editing restaurant creation&#10;and restaurant login" />
+    <option name="LAST_COMMIT_MESSAGE" value="after editing restaurant creation&#10;and restaurant login" />
   </component>
 </project>
