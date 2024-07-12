@@ -364,7 +364,7 @@ class PlaceOrderView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({"status": True, "message": "Order placed successfully", "order": serializer.data}, status=status.HTTP_201_CREATED)
-        return Response({"status": False, "message": serializer.errors}, status=status.HTTP_200_BAD_OK)
+        return Response({"status": False, "message": serializer.errors}, status=status.HTTP_200_OK)
 
 
 class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
