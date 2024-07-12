@@ -12,29 +12,40 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate_password(self, value):
-        # Check that the password is longer than 8 characters and contains both letters and numbers
         if len(value) < 7 or not any(char.isdigit() for char in value) or not any(char.isalpha() for char in value):
-            raise serializers.ValidationError(
-                "Password must be longer than 8 characters and contain both letters and numbers.")
+            raise serializers.ValidationError({
+                "status": False,
+                "message": "Password must be longer than 8 characters and contain both letters and numbers."
+            })
         return value
 
     def validate_email(self, value):
-        # Check that the email does not already exist
         if CustomUser.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already exists.")
+            raise serializers.ValidationError({
+                "status": False,
+                "message": "Email already exists."
+            })
         return value
 
     def validate(self, data):
-        # Check that the two password entries match
         password = data.get('password')
         confirm_password = data.pop('confirm_password', None)
         if password != confirm_password:
-            raise serializers.ValidationError("Those passwords don't match.")
+            raise serializers.ValidationError({
+                "status": False,
+                "message": "Those passwords don't match."
+            })
         return data
 
     def create(self, validated_data):
         user = CustomUser.objects.create_user(**validated_data)
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ('id', 'phone', 'email', 'full_name', 'user_type')
 
 
 class ResetPasswordSerializer(serializers.Serializer):
@@ -52,9 +63,11 @@ class ChangePasswordSerializer(serializers.Serializer):
     otp = serializers.CharField()
 
     def validate_email(self, value):
-        # Check if email exists in the database
         if not CustomUser.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email not found in the database")
+            raise serializers.ValidationError({
+                "status": False,
+                "message": "Email not found in the database"
+            })
         return value
 
 
@@ -107,7 +120,23 @@ class OrderSerializer(serializers.ModelSerializer):
         return Order.objects.create(**validated_data)
 
 
-class FCMDeviceSerializer(serializers.ModelSerializer):
+class FoodCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FCMDevice
-        fields = ('id', 'user', 'registration_id', 'type')
+        model = Food
+        fields = ['name', 'picture', 'price', 'category', 'desc']
+
+    def create(self, validated_data):
+        restaurant = self.context['request'].user.restaurant
+        return Food.objects.create(restaurant=restaurant, **validated_data)
+
+
+class FCMTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FCMToken
+        fields = ['user', 'token']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'message', 'timestamp']

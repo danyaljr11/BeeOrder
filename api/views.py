@@ -1,18 +1,19 @@
 from django.db.models import Q
 from rest_framework import generics, status, mixins
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated , AllowAny
 from rest_framework.response import Response
 from django.core.mail import send_mail
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from .notifications import *
+from django.conf import settings
+from .permissions import IsRestaurantManager
 from .serializers import *
 from .models import *
 import random
-from django.contrib.auth import logout, authenticate
-from .permissions import IsRestaurantManager
-
+from django.contrib.auth import authenticate
+from .signals import order_status_updated
+from rest_framework.parsers import MultiPartParser, FormParser
 
 User = settings.AUTH_USER_MODEL
 
@@ -20,6 +21,7 @@ User = settings.AUTH_USER_MODEL
 class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         try:
@@ -38,18 +40,29 @@ class RegisterView(generics.CreateAPIView):
 
 class LoginView(generics.GenericAPIView):
     serializer_class = UserSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         try:
             email = request.data.get('email')
             password = request.data.get('password')
+            user_type = request.data.get('user_type')
 
+            # Authenticate user
             user = authenticate(request, email=email, password=password)
 
             if not user:
                 return Response({
                     "status": False,
                     "message": "Invalid email or password",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+
+            # Check user type
+            if user.user_type != user_type:
+                return Response({
+                    "status": False,
+                    "message": f"User type mismatch. Expected {user_type} but got {user.user_type}",
                     "data": {}
                 }, status=status.HTTP_200_OK)
 
@@ -76,34 +89,9 @@ class LoginView(generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
 
-class LogoutView(generics.GenericAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        try:
-            # Invalidate the token
-            token = request.data.get('token')
-            if token:
-                try:
-                    # Blacklist the token
-                    BlacklistedToken.objects.create(token=token)
-                except Exception as e:
-                    # Handle exception, e.g., token already blacklisted
-                    pass
-
-            # Perform logout (clear session)
-            logout(request)
-
-            return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({
-                "status": False,
-                "message": str(e)
-            }, status=status.HTTP_200_OK)
-
-
 class ResetPasswordView(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -138,6 +126,7 @@ class ResetPasswordView(generics.GenericAPIView):
 
 class VerifyOTPView(generics.GenericAPIView):
     serializer_class = VerifyOTPSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -164,6 +153,7 @@ class VerifyOTPView(generics.GenericAPIView):
 
 class ChangePasswordView(generics.GenericAPIView):
     serializer_class = ChangePasswordSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -202,6 +192,7 @@ class ChangePasswordView(generics.GenericAPIView):
 class PanerPictureListView(mixins.ListModelMixin, generics.GenericAPIView):
     queryset = PanerPicture.objects.all()
     serializer_class = PanerPictureSerializer
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -213,9 +204,31 @@ class PanerPictureListView(mixins.ListModelMixin, generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
 
+class CreateRestaurantView(APIView):
+    permission_classes = [IsAuthenticated, IsRestaurantManager]
+    parser_classes = (MultiPartParser, FormParser,)
+
+    def post(self, request):
+        serializer = RestaurantSerializerAll(data=request.data)
+        if serializer.is_valid():
+            # Save the restaurant instance with the current user as the manager
+            serializer.save(manager=request.user)
+            return Response({
+                'status': True,
+                'message': 'Restaurant created successfully',
+                'data': serializer.data  # Include the entered data in the response
+            }, status=status.HTTP_200_OK)
+        return Response({
+            'status': False,
+            'message': serializer.errors,
+            'data': request.data  # Include the entered data in the response
+        }, status=status.HTTP_200_OK)
+
+
 class RestaurantListView(mixins.ListModelMixin, generics.GenericAPIView):
     queryset = Restaurant.objects.all()
-    serializer_class = RestaurantSerializer
+    serializer_class = RestaurantSerializerAll
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -230,6 +243,7 @@ class RestaurantListView(mixins.ListModelMixin, generics.GenericAPIView):
 class CategoryListView(mixins.ListModelMixin, generics.GenericAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -242,7 +256,8 @@ class CategoryListView(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 class FoodByCategoryView(mixins.ListModelMixin, generics.GenericAPIView):
-    serializer_class = FoodSerializer
+    serializer_class = FoodSerializerAll
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         category_id = self.kwargs['category_id']
@@ -259,7 +274,8 @@ class FoodByCategoryView(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 class FoodByRestaurantView(mixins.ListModelMixin, generics.GenericAPIView):
-    serializer_class = FoodSerializer
+    serializer_class = FoodSerializerAll
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         restaurant_id = self.kwargs['restaurant_id']
@@ -276,31 +292,46 @@ class FoodByRestaurantView(mixins.ListModelMixin, generics.GenericAPIView):
 
 
 class SearchView(generics.GenericAPIView):
-    serializer_class = serializers.Serializer  # Dummy serializer class
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        try:
-            query = self.request.data.get('query', '')
-            food_results = Food.objects.filter(Q(name__icontains=query))
-            restaurant_results = Restaurant.objects.filter(Q(name__icontains=query))
-
-            food_serializer = FoodSerializer(food_results, many=True)
-            restaurant_serializer = RestaurantSerializer(restaurant_results, many=True)
-
-            return Response({
-                'foods': food_serializer.data,
-                'restaurants': restaurant_serializer.data
-            })
-        except Exception as e:
+        query = request.data.get('query', '')
+        if not query:
             return Response({
                 "status": False,
-                "message": str(e)
+                "message": "Query parameter is required"
             }, status=status.HTTP_200_OK)
+
+        # Search in Restaurant model
+        restaurant_queryset = Restaurant.objects.filter(
+            name__icontains=query
+        )
+        restaurant_serializer = RestaurantSerializerAll(restaurant_queryset.distinct(), many=True)
+
+        # Search in Food model
+        food_queryset = Food.objects.filter(
+            name__icontains=query
+        ) | Food.objects.filter(
+            restaurant__name__icontains=query
+        )
+        food_serializer = FoodSerializerAll(food_queryset.distinct(), many=True)
+
+        # Combine results
+        combined_results = {
+            "restaurants": restaurant_serializer.data,
+            "foods": food_serializer.data
+        }
+
+        return Response({
+            "status": True,
+            "results": combined_results
+        }, status=status.HTTP_200_OK)
 
 
 class FoodDetailView(generics.RetrieveAPIView):
     queryset = Food.objects.all()
-    serializer_class = FoodSerializer
+    serializer_class = FoodSerializerAll
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -314,7 +345,8 @@ class FoodDetailView(generics.RetrieveAPIView):
 
 class RestaurantDetailView(generics.RetrieveAPIView):
     queryset = Restaurant.objects.all()
-    serializer_class = RestaurantSerializer
+    serializer_class = RestaurantSerializerAll
+    permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -326,52 +358,23 @@ class RestaurantDetailView(generics.RetrieveAPIView):
             }, status=status.HTTP_200_OK)
 
 
-class OrderListCreateView(generics.ListCreateAPIView):
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        return Order.objects.filter(customer=user)
-
-    def create(self, request, *args, **kwargs):
-        try:
-            request.data['customer'] = request.user.id
-            response = super().create(request, *args, **kwargs)
-
-            # Notify the restaurant manager about the new order
-            order_data = response.data
-            notify_manager(order_data['restaurant'], order_data, firebase_apps)
-
-            return Response({
-                "status": True,
-                "message": "Order created successfully",
-                "data": response.data
-            }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({
-                "status": False,
-                "message": str(e)
-            }, status=status.HTTP_200_OK)
+class PlaceOrderView(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"status": True, "message": "Order placed successfully", "order": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({"status": False, "message": serializer.errors}, status=status.HTTP_200_BAD_OK)
 
 
-class OrderDetailView(generics.RetrieveAPIView):
+class OrderDetailView(mixins.RetrieveModelMixin, generics.GenericAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.user_type == 'customer':
-            return Order.objects.filter(customer=user)
-        elif user.user_type == 'delivery_guy':
-            return Order.objects.filter(delivery_guy=user)
-        elif user.user_type == 'restaurant_manager':
-            return Order.objects.filter(restaurant__manager=user)
-
     def get(self, request, *args, **kwargs):
         try:
-            return super().get(request, *args, **kwargs)
+            return self.retrieve(request, *args, **kwargs)
         except Exception as e:
             return Response({
                 "status": False,
@@ -396,80 +399,211 @@ class PendingOrdersListView(generics.ListAPIView):
                 status=status.HTTP_200_OK)
 
 
-class AssignOrderView(APIView):
+class OrderHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        orders = Order.objects.filter(customer=user).order_by('-created_at')
+        serializer = OrderSerializer(orders, many=True)
+        return Response({"status": True, "orders": serializer.data}, status=status.HTTP_200_OK)
+
+
+class UpdateOrderStatusView(APIView):
+    def patch(self, request, order_id, *args, **kwargs):
+        try:
+            order = Order.objects.get(id=order_id)
+
+            # Example logic to update order status
+            new_status = request.data.get('status')
+            if new_status:
+                order.status = new_status
+                order.save()
+
+                return Response({"status": True, "message": "Order status updated successfully"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"status": False, "message": "Missing 'status' parameter in request body"}, status=status.HTTP_200_OK)
+
+        except Order.DoesNotExist:
+            return Response({"status": False, "message": "Order not found"}, status=status.HTTP_200_OK)
+
+
+class CancelOrderView(APIView):
     def post(self, request, order_id, *args, **kwargs):
         try:
-            order = Order.objects.get(id=order_id, status='pending')
-            order.delivery_guy = request.user
-            order.status = 'confirmed'
+            order = Order.objects.get(id=order_id)
+
+            # Check if the order is pending before canceling
+            if order.status != 'pending':
+                return Response({"status": False, "message": "Only pending orders can be canceled"}, status=status.HTTP_200_OK)
+
+            # Proceed with cancellation logic here
+            # For example, updating order status to cancel
+            order.status = 'canceled'
             order.save()
-            notify_customer(order.customer, "Order is on the way", order, firebase_apps)
-            return Response({"status": True, "message": "Order assigned successfully", "data": OrderSerializer(order).data})
+
+            return Response({"status": True, "message": "Order successfully canceled"}, status=status.HTTP_200_OK)
+
         except Order.DoesNotExist:
-            return Response({"status": False, "message": "Order not found or already assigned"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"status": False, "message": str(e)}, status=status.HTTP_200_OK)
+            return Response({"status": False, "message": "Order not found"}, status=status.HTTP_200_OK)
 
 
-class OrderListForManagerView(generics.ListAPIView):
-    serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated, IsRestaurantManager]
-
-    def get_queryset(self):
-        return Order.objects.filter(restaurant__manager=self.request.user)
+class ListNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        user = request.user
+        notifications = Notification.objects.filter(user=user).order_by('-timestamp')
+        serializer = NotificationSerializer(notifications, many=True)
+        return Response({"status": True, "notifications": serializer.data}, status=status.HTTP_200_OK)
+
+
+# class AssignOrderView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     def post(self, request, order_id, *args, **kwargs):
+#         try:
+#             order = Order.objects.get(id=order_id, status='pending')
+#             order.delivery_guy = request.user
+#             order.status = 'confirmed'
+#             order.save()
+#             notify_customer(order.customer, "Order is on the way", order, firebase_apps)
+#             return Response({"status": True, "message": "Order assigned successfully", "data": OrderSerializer(order).data})
+#         except Order.DoesNotExist:
+#             return Response({"status": False, "message": "Order not found or already assigned"}, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response({"status": False, "message": str(e)}, status=status.HTTP_200_OK)
+
+
+# class OrderListForManagerView(generics.ListAPIView):
+#     serializer_class = OrderSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         return Order.objects.filter(restaurant__manager=self.request.user)
+
+#     def get(self, request, *args, **kwargs):
+#         try:
+#             return self.list(request, *args, **kwargs)
+#         except Exception as e:
+#             return Response({
+#                 "status": False,
+#                 "message": str(e)
+#             }, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+def register_fcm_token(request):
+    try:
+        user = request.user
+        token = request.data.get('token')
+
+        if not token:
+            return Response({
+                "status": False,
+                "message": "FCM token is required"
+            }, status=status.HTTP_200_OK)
+
+        FCMToken.objects.update_or_create(user=user, defaults={'token': token})
+        return Response({'status': True, 'message': 'FCM token registered successfully'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            "status": False,
+            "message": str(e)
+        }, status=status.HTTP_200_OK)
+
+
+class GetProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+
+class AddFoodView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.user_type != 'restaurant_manager':
+            return Response({
+                "status": "error",
+                "message": "Not authorized."
+            }, status=status.HTTP_200_OK)
+
+        serializer = FoodCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "status": "success",
+                "message": "Food item added successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+
+        return Response({
+            "status": "error",
+            "message": "Invalid data.",
+            "errors": serializer.errors
+        }, status=status.HTTP_200_OK)
+
+
+class RestaurantManagerLoginView(APIView):
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
         try:
-            return self.list(request, *args, **kwargs)
+            email = request.data.get('email')
+            password = request.data.get('password')
+            user_type = 'restaurant_manager'  # Set the user type explicitly
+
+            # Authenticate user
+            user = authenticate(request, email=email, password=password)
+
+            if not user:
+                return Response({
+                    "status": False,
+                    "message": "Invalid email or password",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+
+            # Check user type
+            if user.user_type != user_type:
+                return Response({
+                    "status": False,
+                    "message": f"User type mismatch. Expected {user_type} but got {user.user_type}",
+                    "data": {}
+                }, status=status.HTTP_200_OK)
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            token = str(refresh.access_token)  # Get the access token
+
+            # Get the associated restaurant (assuming one-to-one relationship)
+            try:
+                restaurant = Restaurant.objects.get(manager=user)
+                restaurant_id = restaurant.id
+            except Restaurant.DoesNotExist:
+                restaurant_id = None  # Set to null initially
+
+            # Serialize user data
+            serializer = UserSerializer(user)
+
+            # Customize the response data
+            return Response({
+                "status": True,
+                "message": "User logged in successfully",
+                "data": {
+                    "user": serializer.data,
+                    "token": token,  # Include the token
+                    "restaurant_id": restaurant_id
+                }
+            }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({
                 "status": False,
                 "message": str(e)
             }, status=status.HTTP_200_OK)
-
-
-class UpdateOrderStatusView(APIView):
-    permission_classes = [IsAuthenticated, IsRestaurantManager]
-
-    def post(self, request, order_id, *args, **kwargs):
-        try:
-            order = Order.objects.get(id=order_id)
-            new_status = request.data.get('status')
-            if new_status not in dict(Order.STATUS_CHOICES):
-                return Response({"status": False, "message": "Invalid status"}, status=status.HTTP_200_OK)
-            order.status = new_status
-            order.save()
-            if new_status == 'confirmed':
-                notify_delivery_guys(order, firebase_apps)
-            elif new_status == 'rejected':
-                notify_customer(order.customer, "Your order was rejected", order, firebase_apps)
-            return Response({"status": True, "message": "Order status updated successfully", "data": OrderSerializer(order).data})
-        except Order.DoesNotExist:
-            return Response({"status": False, "message": "Order not found"}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"status": False, "message": str(e)}, status=status.HTTP_200_OK)
-
-
-class FCMRegistrationView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        serializer = FCMDeviceSerializer(data=request.data)
-        if serializer.is_valid():
-            FCMDevice.objects.update_or_create(user=request.user, defaults={'registration_id': serializer.validated_data['registration_id']})
-            return Response({"status": True, "message": "FCM token registered successfully"}, status=status.HTTP_201_CREATED)
-        return Response({"status": False, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class FCMDeviceListView(generics.ListCreateAPIView):
-    queryset = FCMDevice.objects.all()
-    serializer_class = FCMDeviceSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class FCMDeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = FCMDevice.objects.all()
-    serializer_class = FCMDeviceSerializer
-    permission_classes = [IsAuthenticated]

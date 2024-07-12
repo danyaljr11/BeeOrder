@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.conf import settings
 
 
 class CustomUser(AbstractUser):
@@ -14,6 +13,9 @@ class CustomUser(AbstractUser):
     phone = models.CharField(max_length=15, blank=False, null=False, unique=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=20, null=False, blank=False)
+
+    def __str__(self):
+        return self.full_name
 
 
 class PanerPicture(models.Model):
@@ -36,6 +38,7 @@ class Restaurant(models.Model):
     address = models.CharField(max_length=300)
     picture = models.ImageField(upload_to='images/restaurant_pictures/')
     desc = models.CharField(max_length=300)
+    manager = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='restaurant')
 
     def __str__(self):
         return self.name
@@ -54,30 +57,40 @@ class Food(models.Model):
 
 
 class Order(models.Model):
-    STATUS_CHOICES = [
+    STATUS_CHOICES = (
         ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('on_the_way', 'On the Way'),
-        ('completed', 'Completed'),
-        ('rejected', 'Rejected'),
-    ]
+        ('accepted', 'Accepted'),
+        ('on_the_way', 'On The Way'),
+        ('delivered', 'Delivered'),
+    )
 
     customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='orders')
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    delivery_location = models.CharField(max_length=255)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='orders')
+    delivery_guy = models.ForeignKey(CustomUser, null=True, blank=True, on_delete=models.SET_NULL, related_name='deliveries')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    date_time = models.DateTimeField()
-    items = models.JSONField()  # or use TextField for JSON string if using older Django versions
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivery_location = models.CharField(max_length=255)  # Example field, you can adjust as needed
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)  # Example field, you can adjust as needed
+    date_time = models.DateTimeField()  # Example field, you can adjust as needed
+    items = models.JSONField()  # JSON field for storing items
 
     def __str__(self):
-        return f"Order {self.id} - {self.status}"
+        return f"Order {self.id} by {self.customer.full_name}"
 
 
-class FCMDevice(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    registration_id = models.CharField(max_length=255)
-    type = models.CharField(max_length=10, choices=[('android', 'Android'), ('ios', 'iOS')], default='android')
+class FCMToken(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255)
 
     def __str__(self):
-        return f'{self.user} - {self.registration_id}'
+        return self.user.username
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    message = models.CharField(max_length=500)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification {self.id} for {self.user.full_name}"
+
