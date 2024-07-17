@@ -61,6 +61,8 @@ class Food(models.Model):
 class Order(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
+        ('canceled', 'Canceled'),
+        ('rejected', 'Rejected'),
         ('accepted', 'Accepted'),
         ('on_the_way', 'On The Way'),
         ('delivered', 'Delivered'),
@@ -73,6 +75,8 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     lat = models.FloatField(max_length=300)
     lot = models.FloatField(max_length=300)
+    w_lat = models.FloatField(max_length=300, default=None , null=True, blank=True)
+    w_lot = models.FloatField(max_length=300, default=None, null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)  # Example field, you can adjust as needed
     date_time = models.DateTimeField()  # Example field, you can adjust as needed
     items = models.JSONField()  # JSON field for storing items

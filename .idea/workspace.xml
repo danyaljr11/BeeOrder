@@ -5,8 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5c49f405-8860-4568-abda-551305eeb0e6" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/api/migrations/0001_initial.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/api/serializers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -55,7 +58,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-09665e90c3a7-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.15026.15" />
+        <option value="bundled-python-sdk-eebebe6c2be4-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.15325.20" />
       </set>
     </attachedChunks>
   </component>
@@ -132,7 +135,15 @@
       <option name="project" value="LOCAL" />
       <updated>1720769150756</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="edited http_ok">
+      <option name="closed" value="true" />
+      <created>1720807469134</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1720807469134</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -156,6 +167,7 @@
     <MESSAGE value="after editing restaurant creation&#10;and restaurant login" />
     <MESSAGE value="after adding restaurants and categories and food" />
     <MESSAGE value="after adding lat , lot" />
-    <option name="LAST_COMMIT_MESSAGE" value="after adding lat , lot" />
+    <MESSAGE value="edited http_ok" />
+    <option name="LAST_COMMIT_MESSAGE" value="edited http_ok" />
   </component>
 </project>
